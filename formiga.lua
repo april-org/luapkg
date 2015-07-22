@@ -461,8 +461,6 @@ function formiga.initialize ()
     os_mkdir(formiga.global_properties.build_dir)
     os_mkdir(formiga.os.compose_dir(formiga.global_properties.build_dir,"bin"))
 
-    formiga.lua_dot_c_path = formiga.os.get_lua_dot_c_path()
-    formiga.lua_path=formiga.os.compose_dir(formiga.os.cwd,"lua","lua-5.2.2")
   end
 end
 
@@ -910,7 +908,6 @@ end
 function formiga.__object__ (t)
   local prop = t.target.package.properties
   local build_dir = formiga.os.compose_dir(formiga.global_properties.build_dir, formiga.os.basedir)
-  
   if (t.file == nil) then
     print("[object]  error: file must be specified")
     return
@@ -1084,8 +1081,8 @@ function formiga.__luacode__ (t)
     local l = f:read("*l")
     f:close()
     if not l or #l == 0 then
-      printverbosecolor(0,"red","black",
-			"WARNING!!! Impossible to run lstrip command, skipping lstrip")
+      -- printverbosecolor(0,"red","black",
+      -- "WARNING!!! Impossible to run lstrip command, skipping lstrip")
       return false
     end
     return true
@@ -1537,86 +1534,112 @@ end
 --                           LINK_MAIN_PROGRAM
 ----------------------------------------------------------------------
 
+local function build_luapkg_main_programs()
+  if not formiga.builded_luapkg_main_programs then
+    local module_name = formiga.module_name
+    formiga.builded_luapkg_main_programs = true
+    local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkg.cc"),"w")
+    --
+    f:write('#define lua_c\n')
+    f:write('extern "C" {\n')
+    f:write("#include <unistd.h>\n")
+    f:write("#include <stdio.h>\n")
+    f:write("#include <string.h>\n")
+    f:write('#include <lua.h>\n')
+    f:write('#include <lauxlib.h>\n')
+    f:write('#include <lualib.h>\n')
+    --f:write('#include <locale.h>\n')
+    f:write('}\n')
+    f:write('#ifndef GIT_COMMIT\n')
+    f:write('#define GIT_COMMIT UNKNOWN\n')
+    f:write('#endif\n')
+    f:write('#define STRINGFY(X) #X\n')
+    f:write('#define TOSTRING(X) STRINGFY(X)\n')
+    for i,content in ipairs(formiga.disclaimer_strings) do
+      f:write('#define DISCLAIMER' .. i .. ' ' .. content .. '\n')
+    end
+    -- 
+    f:write('extern "C" {\n')
+    for _,data in pairs(formiga.lua_dot_c_register_functions) do
+      f:write('extern int '..data[2]..'(lua_State *L);\n')
+    end
+    --
+    f:write('int luaopen_' .. module_name .. '(lua_State *L) { \n')
+    f:write('  lua_getglobal(L,"package");\n')
+    f:write('  lua_getfield(L,-1,"loaded");\n')
+    f:write('  lua_getfield(L,-1,"aprilann");\n')
+    f:write('  bool loaded = !lua_isnil(L,-1); lua_pop(L,3);\n')
+    f:write('  if (loaded) { \n')
+    f:write(('    lua_pushstring(L, "You are reloading %s, probably you are using a standalone executable instead of \'lua\'");'):format(module_name:upper()))
+    f:write('    lua_error(L);\n')
+    f:write('  }\n')
+    for _,data in pairs(formiga.lua_dot_c_register_functions) do
+      -- f:write('  '..funcname..'(L);\n')
+      f:write('  luaL_requiref(L, "' .. data[1] .. '", ' .. data[2] .. ', 0);\n')
+      f:write('  lua_pop(L, 1);\n')
+    end
+    f:write('  if (isatty(fileno(stdin)) && isatty(fileno(stdout))) {\n')
+    for i,_ in ipairs(formiga.disclaimer_strings) do
+      f:write('    luai_writestring(DISCLAIMER' .. i .. ','..
+                'strlen(DISCLAIMER'..i..'));\n')
+      f:write('    luai_writeline();\n')
+    end
+    f:write('  }\n')
+    f:write('  lua_newtable(L);\n')
+    f:write('  lua_pushstring(L, "' .. module_name:upper() .. '");\n')
+    f:write('  lua_pushboolean(L, 1);\n')
+    f:write('  lua_rawset(L, -3);\n')
+    f:write('  return 1;\n')
+    f:write('}\n')
+    f:write('}\n')
+    f:close()
+    --
+    local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkgMain.cc"),"w")
+    f:write('#define lua_c\n')
+    f:write('extern "C" {\n')
+    f:write("#include <unistd.h>\n")
+    f:write("#include <stdio.h>\n")
+    f:write("#include <string.h>\n")
+    f:write('#include <lua.h>\n')
+    f:write('#include <lauxlib.h>\n')
+    f:write('#include <lualib.h>\n')
+    --f:write('#include <locale.h>\n')
+    f:write('}\n')
+    f:write('extern "C" {\n')
+    f:write('extern int luaopen_' .. module_name .. '(lua_State *L);\n')
+    f:write('}\n')
+    f:write('#define lua_userinit(L)   do { \\\n')
+    f:write('    luaL_requiref(L, "' .. module_name .. '", luaopen_' .. module_name .. ', 1);\\\n')
+    f:write('    lua_pop(L, 1);\\\n')
+    f:write('  } while(0)\n')
+    f:write('\n')
+    f:write('#include <lua.c>\n')
+    f:close()
+    --
+    local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkgDummy.cc"),"w")
+    f:write('#define lua_c\n')
+    f:write('extern "C" {\n')
+    f:write("#include <unistd.h>\n")
+    f:write("#include <stdio.h>\n")
+    f:write("#include <string.h>\n")
+    f:write('#include <lua.h>\n')
+    f:write('#include <lauxlib.h>\n')
+    f:write('#include <lualib.h>\n')
+    --f:write('#include <locale.h>\n')
+    f:write('}\n')
+    f:write('extern "C" {\n')
+    f:write('extern int luaopen_'..module_name..'(lua_State *L);\n')
+    f:write('}\n')
+    f:write('static void dummy_'..module_name..'(lua_State *L) { luaopen_'.. module_name..'(L); }\n')
+    f:close()
+  end
+end
+
 function formiga.__link_main_program__ (t)
   -- crear programa ppal
   --formiga.exec_package("luapkg_main","build")
   local module_name = formiga.module_name
-  local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkg.cc"),"w")
-  --
-  f:write('#define lua_c\n')
-  f:write('extern "C" {\n')
-  f:write("#include <unistd.h>\n")
-  f:write("#include <stdio.h>\n")
-  f:write("#include <string.h>\n")
-  f:write('#include <lua.h>\n')
-  f:write('#include <lauxlib.h>\n')
-  f:write('#include <lualib.h>\n')
-  --f:write('#include <locale.h>\n')
-  f:write('}\n')
-  f:write('#ifndef GIT_COMMIT\n')
-  f:write('#define GIT_COMMIT UNKNOWN\n')
-  f:write('#endif\n')
-  f:write('#define STRINGFY(X) #X\n')
-  f:write('#define TOSTRING(X) STRINGFY(X)\n')
-  for i,content in ipairs(formiga.disclaimer_strings) do
-    f:write('#define DISCLAIMER' .. i .. ' ' .. content .. '\n')
-  end
-  -- 
-  f:write('extern "C" {\n')
-  for _,data in pairs(formiga.lua_dot_c_register_functions) do
-    f:write('extern int '..data[2]..'(lua_State *L);\n')
-  end
-  --
-  f:write('int luaopen_' .. module_name .. '(lua_State *L) { \n')
-  f:write('  lua_getglobal(L,"package");\n')
-  f:write('  lua_getfield(L,-1,"loaded");\n')
-  f:write('  lua_getfield(L,-1,"aprilann");\n')
-  f:write('  bool loaded = !lua_isnil(L,-1); lua_pop(L,3);\n')
-  f:write('  if (loaded) { \n')
-  f:write('    lua_pushstring(L, "You are reloading APRIL-ANN, probably you are using \'april-ann\' command instead of \'lua\'");')
-  f:write('    lua_error(L);\n')
-  f:write('  }\n')
-  for _,data in pairs(formiga.lua_dot_c_register_functions) do
-    -- f:write('  '..funcname..'(L);\n')
-    f:write('  luaL_requiref(L, "' .. data[1] .. '", ' .. data[2] .. ', 0);\n')
-    f:write('  lua_pop(L, 1);\n')
-  end
-  f:write('  if (isatty(fileno(stdin)) && isatty(fileno(stdout))) {\n')
-  for i,_ in ipairs(formiga.disclaimer_strings) do
-    f:write('    luai_writestring(DISCLAIMER' .. i .. ','..
-	      'strlen(DISCLAIMER'..i..'));\n')
-    f:write('    luai_writeline();\n')
-  end
-  f:write('  }\n')
-  f:write('  lua_newtable(L);\n')
-  f:write('  lua_pushstring(L, "' .. module_name:upper() .. '");\n')
-  f:write('  lua_pushboolean(L, 1);\n')
-  f:write('  lua_rawset(L, -3);\n')
-  f:write('  return 1;\n')
-  f:write('}\n')
-  f:write('}\n')
-  f:close()
-  --
-  local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkgMain.cc"),"w")
-  f:write('#define lua_c\n')
-  f:write('extern "C" {\n')
-  f:write("#include <unistd.h>\n")
-  f:write("#include <stdio.h>\n")
-  f:write("#include <string.h>\n")
-  f:write('#include <lua.h>\n')
-  f:write('#include <lauxlib.h>\n')
-  f:write('#include <lualib.h>\n')
-  --f:write('#include <locale.h>\n')
-  f:write('}\n')
-  f:write('extern "C" {\n')
-  f:write('extern int luaopen_' .. module_name .. '(lua_State *L);\n')
-  f:write('}\n')
-  f:write('#define lua_userinit(L)   do { \\\n')
-  f:write('    luaL_requiref(L, "' .. module_name .. '", luaopen_' .. module_name .. ', 1);\\\n')
-  f:write('    lua_pop(L, 1);\\\n')
-  f:write('  } while(0)\n')
-  f:write('\n')
-  f:write('#include <lua.c>\n')
+  build_luapkg_main_programs()
   --
   -- Collect all package libraries and generate compiler options.
   local package_library_paths_str=""
@@ -1650,7 +1673,7 @@ function formiga.__link_main_program__ (t)
                                                         "luapkgMain.cc"),
                                  --formiga.compiler.include_dir,
                                  formiga.get_all_objects(),
-                                 formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,"luapkg","c_src","*.o"),
                                  formiga.os.compose_dir(formiga.os.cwd,"lua","lib","*.a"),
                                  package_library_paths_str,
                                  package_link_libraries_str,
@@ -1672,8 +1695,21 @@ function formiga.__link_main_program__ (t)
 end
 
 function link_main_program (t)
+  formiga.lua_dot_c_path = formiga.os.get_lua_dot_c_path()
   t.__task__ = formiga.__link_main_program__
   return t
+end
+
+----------------------------------------------------------------------
+--                       COMPILE LUAPKG UTILS
+----------------------------------------------------------------------
+
+function compile_luapkg_utils(t)
+  formiga.compile_luapkg_utils = true
+  t.file = formiga.os.compose_dir("binding","c_src","*.cc")
+  t.include_dirs = "include"
+  t.dest_dir = formiga.global_properties.build_dir
+  return object(t)
 end
 
 ----------------------------------------------------------------------
@@ -1682,63 +1718,7 @@ end
 
 function formiga.__create_shared_library__ (t)
   local module_name = formiga.module_name
-  local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkg.cc"),"w")
-  --
-  f:write('#define lua_c\n')
-  f:write('extern "C" {\n')
-  f:write("#include <unistd.h>\n")
-  f:write("#include <stdio.h>\n")
-  f:write("#include <string.h>\n")
-  f:write('#include <lua.h>\n')
-  f:write('#include <lauxlib.h>\n')
-  f:write('#include <lualib.h>\n')
-  --f:write('#include <locale.h>\n')
-  f:write('}\n')
-  f:write('#ifndef GIT_COMMIT\n')
-  f:write('#define GIT_COMMIT UNKNOWN\n')
-  f:write('#endif\n')
-  f:write('#define STRINGFY(X) #X\n')
-  f:write('#define TOSTRING(X) STRINGFY(X)\n')
-  for i,content in ipairs(formiga.disclaimer_strings) do
-    f:write('#define DISCLAIMER' .. i .. ' ' .. content .. '\n')
-  end
-  -- 
-  f:write('extern "C" {\n')
-  for _,data in pairs(formiga.lua_dot_c_register_functions) do
-    f:write('extern int '..data[2]..'(lua_State *L);\n')
-  end
-  --
-  f:write('int luaopen_' .. module_name .. '(lua_State *L) { \n')
-  f:write('  lua_getglobal(L,"package");\n')
-  f:write('  lua_getfield(L,-1,"loaded");\n')
-  f:write('  lua_getfield(L,-1,"aprilann");\n')
-  f:write('  bool loaded = !lua_isnil(L,-1); lua_pop(L,3);\n')
-  f:write('  if (loaded) { \n')
-  f:write('    lua_pushstring(L, "You are reloading APRIL-ANN, probably you are using \'april-ann\' command instead of \'lua\'");')
-  f:write('    lua_error(L);\n')
-  f:write('  }\n')
-  for _,data in pairs(formiga.lua_dot_c_register_functions) do
-    -- f:write('  '..funcname..'(L);\n')
-    f:write('  luaL_requiref(L, "' .. data[1] .. '", ' .. data[2] .. ', 0);\n')
-    f:write('  lua_pop(L, 1);\n')
-  end
-  f:write('  if (isatty(fileno(stdin)) && isatty(fileno(stdout))) {\n')
-  for i,_ in ipairs(formiga.disclaimer_strings) do
-    f:write('    luai_writestring(DISCLAIMER' .. i .. ','..
-	      'strlen(DISCLAIMER'..i..'));\n')
-    f:write('    luai_writeline();\n')
-  end
-  f:write('  }\n')
-  f:write('  lua_newtable(L);\n')
-  f:write('  lua_pushstring(L, "' .. module_name:upper() .. '");\n')
-  f:write('  lua_pushboolean(L, 1);\n')
-  f:write('  lua_rawset(L, -3);\n')
-  f:write('  return 1;\n')
-  f:write('}\n')
-  f:write('}\n')
-  f:close()
-  --
-  
+  build_luapkg_main_programs()
   -- Collect all package libraries and generate compiler options.
   local package_library_paths_str=""
   for package_name, paths in pairs(formiga.package_library_paths) do
@@ -1764,7 +1744,7 @@ function formiga.__create_shared_library__ (t)
   os_mkdir(shared_lib_dest_dir)
 
   printverbosecolor(1, "bright_blue", nil, "Creating shared library...")
-  -- Shared library for compilation of new modules out of APRIL repository
+  -- Shared library for compilation of new modules out of LUAPKG repository
   local command = table.concat({ formiga.compiler.CPPcompiler,
                                  formiga.compiler.wall,
                                  formiga.compiler.destination,
@@ -1772,9 +1752,8 @@ function formiga.__create_shared_library__ (t)
                                                         "lib"..formiga.program_name..".so"),
                                  formiga.os.compose_dir(formiga.global_properties.build_dir,
                                                         "luapkg.cc"),
-                                 --formiga.compiler.include_dir,
                                  formiga.get_all_objects(),
-                                 formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
+                                 formiga.compile_luapkg_utils and formiga.os.compose_dir(formiga.global_properties.build_dir,"luapkg","c_src","*.o") or "",
                                  package_library_paths_str,
                                  package_link_libraries_str,
                                  table.concat(formiga.compiler.extra_libs,
@@ -1786,8 +1765,7 @@ function formiga.__create_shared_library__ (t)
                                  table.concat(formiga.version_flags,
                                               " "),
                                  pkgconfig_libs_list,
-                                 ' -lm '.. formiga.compiler.include_dir ..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
-                                   formiga.lua_dot_c_path},
+                                 ' -lm'},
     " ")
   command = command:gsub("-bundle","-dynamiclib") -- for MacOS X FIXME: do it in a better way
   --
@@ -1804,10 +1782,7 @@ function formiga.__create_shared_library__ (t)
                                  formiga.os.compose_dir(shared_lib_dest_dir,
                                                         module_name..".so"),
                                  formiga.os.compose_dir(formiga.global_properties.build_dir,
-                                                        "luapkgMain.cc"),
-                                 --formiga.compiler.include_dir,
-                                 -- formiga.get_all_objects(),
-                                 -- formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
+                                                        "luapkgDummy.cc"),
                                  formiga.compiler.object_dir..shared_lib_dest_dir,
                                  formiga.compiler.library_inclusion..formiga.program_name,
                                  package_library_paths_str,
@@ -1821,8 +1796,7 @@ function formiga.__create_shared_library__ (t)
                                  table.concat(formiga.version_flags,
                                               " "),
                                  pkgconfig_libs_list,
-                                 ' -lm '.. formiga.compiler.include_dir ..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
-                                   formiga.lua_dot_c_path},
+                                 ' -lm'},
     " ")
   --
   printverbose(2,'['..command..']')
@@ -2494,8 +2468,8 @@ function luapkg (t)
   formiga.program_name = t.program_name
   formiga.module_name  = t.program_name:gsub("[%-%.%_]","")
   
-  formiga.version_flags    = t.version_flags
-  formiga.disclaimer_strings = t.disclaimer_strings
+  formiga.version_flags    = t.version_flags or {}
+  formiga.disclaimer_strings = t.disclaimer_strings or {}
 
   formiga.verbosity_level = t.verbosity_level or 2
   if os.getenv("TERM")=="xterm" then
