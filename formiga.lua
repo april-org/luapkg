@@ -1618,7 +1618,6 @@ function formiga.__link_main_program__ (t)
   f:write('\n')
   f:write('#include <lua.c>\n')
   --
-  
   -- Collect all package libraries and generate compiler options.
   local package_library_paths_str=""
   for package_name, paths in pairs(formiga.package_library_paths) do
@@ -1640,113 +1639,200 @@ function formiga.__link_main_program__ (t)
   pkgconfig_libs_list = table.concat(pkgconfig_libs_list," ")
 
   local command = table.concat({ formiga.compiler.CPPcompiler,
-				 formiga.compiler.wall,
-				 formiga.compiler.destination,
-				 formiga.os.compose_dir(formiga.global_properties.build_dir,
-                                                        "bin",
-							formiga.program_name),
+                                 formiga.compiler.wall,
+                                 formiga.compiler.destination,
                                  formiga.os.compose_dir(formiga.global_properties.build_dir,
-							"luapkg.cc"),
-				 formiga.os.compose_dir(formiga.global_properties.build_dir,
-							"luapkgMain.cc"),
-				 --formiga.compiler.include_dir,
-				 formiga.get_all_objects(),
-				 formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
-				 formiga.os.compose_dir(formiga.os.cwd,"lua","lib","*.a"),
+                                                        "bin",
+                                                        formiga.program_name),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,
+                                                        "luapkg.cc"),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,
+                                                        "luapkgMain.cc"),
+                                 --formiga.compiler.include_dir,
+                                 formiga.get_all_objects(),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
+                                 formiga.os.compose_dir(formiga.os.cwd,"lua","lib","*.a"),
                                  package_library_paths_str,
                                  package_link_libraries_str,
-				 table.concat(formiga.compiler.extra_libs,
-					      " "),
-				 table.concat(formiga.compiler.extra_flags,
-					      " "),
-				 table.concat(formiga.version_flags,
-					      " "),
-				 pkgconfig_libs_list,
-				 ' -lm '..formiga.compiler.include_dir..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
-				   formiga.lua_dot_c_path},
-			       " ")
+                                 table.concat(formiga.compiler.extra_libs,
+                                              " "),
+                                 table.concat(formiga.compiler.extra_flags,
+                                              " "),
+                                 table.concat(formiga.version_flags,
+                                              " "),
+                                 pkgconfig_libs_list,
+                                 ' -lm '..formiga.compiler.include_dir..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
+                                   formiga.lua_dot_c_path},
+    " ")
+  --
+  printverbose(2,'['..command..']')
+  io.stdout:flush() -- para que las cosas salgan en un orden apropiado
+  io.stderr:flush() -- para que las cosas salgan en un orden apropiado
+  formiga.os.execute(command)
+end
+
+function link_main_program (t)
+  t.__task__ = formiga.__link_main_program__
+  return t
+end
+
+----------------------------------------------------------------------
+--                       CREATE SHARED LIBRARY
+----------------------------------------------------------------------
+
+function formiga.__create_shared_library__ (t)
+  local module_name = formiga.module_name
+  local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkg.cc"),"w")
+  --
+  f:write('#define lua_c\n')
+  f:write('extern "C" {\n')
+  f:write("#include <unistd.h>\n")
+  f:write("#include <stdio.h>\n")
+  f:write("#include <string.h>\n")
+  f:write('#include <lua.h>\n')
+  f:write('#include <lauxlib.h>\n')
+  f:write('#include <lualib.h>\n')
+  --f:write('#include <locale.h>\n')
+  f:write('}\n')
+  f:write('#ifndef GIT_COMMIT\n')
+  f:write('#define GIT_COMMIT UNKNOWN\n')
+  f:write('#endif\n')
+  f:write('#define STRINGFY(X) #X\n')
+  f:write('#define TOSTRING(X) STRINGFY(X)\n')
+  for i,content in ipairs(formiga.disclaimer_strings) do
+    f:write('#define DISCLAIMER' .. i .. ' ' .. content .. '\n')
+  end
+  -- 
+  f:write('extern "C" {\n')
+  for _,data in pairs(formiga.lua_dot_c_register_functions) do
+    f:write('extern int '..data[2]..'(lua_State *L);\n')
+  end
+  --
+  f:write('int luaopen_' .. module_name .. '(lua_State *L) { \n')
+  f:write('  lua_getglobal(L,"package");\n')
+  f:write('  lua_getfield(L,-1,"loaded");\n')
+  f:write('  lua_getfield(L,-1,"aprilann");\n')
+  f:write('  bool loaded = !lua_isnil(L,-1); lua_pop(L,3);\n')
+  f:write('  if (loaded) { \n')
+  f:write('    lua_pushstring(L, "You are reloading APRIL-ANN, probably you are using \'april-ann\' command instead of \'lua\'");')
+  f:write('    lua_error(L);\n')
+  f:write('  }\n')
+  for _,data in pairs(formiga.lua_dot_c_register_functions) do
+    -- f:write('  '..funcname..'(L);\n')
+    f:write('  luaL_requiref(L, "' .. data[1] .. '", ' .. data[2] .. ', 0);\n')
+    f:write('  lua_pop(L, 1);\n')
+  end
+  f:write('  if (isatty(fileno(stdin)) && isatty(fileno(stdout))) {\n')
+  for i,_ in ipairs(formiga.disclaimer_strings) do
+    f:write('    luai_writestring(DISCLAIMER' .. i .. ','..
+	      'strlen(DISCLAIMER'..i..'));\n')
+    f:write('    luai_writeline();\n')
+  end
+  f:write('  }\n')
+  f:write('  lua_newtable(L);\n')
+  f:write('  lua_pushstring(L, "' .. module_name:upper() .. '");\n')
+  f:write('  lua_pushboolean(L, 1);\n')
+  f:write('  lua_rawset(L, -3);\n')
+  f:write('  return 1;\n')
+  f:write('}\n')
+  f:write('}\n')
+  f:close()
+  --
+  
+  -- Collect all package libraries and generate compiler options.
+  local package_library_paths_str=""
+  for package_name, paths in pairs(formiga.package_library_paths) do
+    for _, path in ipairs(paths) do
+      package_library_paths_str = package_library_paths_str..formiga.compiler.object_dir..path.." "
+    end
+  end
+  local package_link_libraries_str=""
+  for package_name, libs in pairs(formiga.package_link_libraries) do
+    for _, lib in ipairs(libs) do
+      package_link_libraries_str = package_link_libraries_str..formiga.compiler.library_inclusion..lib.." "
+    end
+  end
+
+  local pkgconfig_libs_list = {}
+  for _,j in pairs(formiga.pkgconfig_libs) do
+    if j ~= "" then table.insert(pkgconfig_libs_list,j) end
+  end
+  pkgconfig_libs_list = table.concat(pkgconfig_libs_list," ")
+
+  local shared_lib_dest_dir = formiga.os.compose_dir(formiga.global_properties.build_dir,
+                                                     "lib")
+  os_mkdir(shared_lib_dest_dir)
+
+  printverbosecolor(1, "bright_blue", nil, "Creating shared library...")
+  -- Shared library for compilation of new modules out of APRIL repository
+  local command = table.concat({ formiga.compiler.CPPcompiler,
+                                 formiga.compiler.wall,
+                                 formiga.compiler.destination,
+                                 formiga.os.compose_dir(shared_lib_dest_dir,
+                                                        "lib"..formiga.program_name..".so"),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,
+                                                        "luapkg.cc"),
+                                 --formiga.compiler.include_dir,
+                                 formiga.get_all_objects(),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
+                                 package_library_paths_str,
+                                 package_link_libraries_str,
+                                 table.concat(formiga.compiler.extra_libs,
+                                              " "),
+                                 table.concat(formiga.compiler.shared_extra_libs,
+                                              " "),
+                                 table.concat(formiga.compiler.extra_flags,
+                                              " "),
+                                 table.concat(formiga.version_flags,
+                                              " "),
+                                 pkgconfig_libs_list,
+                                 ' -lm '.. formiga.compiler.include_dir ..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
+                                   formiga.lua_dot_c_path},
+    " ")
+  command = command:gsub("-bundle","-dynamiclib") -- for MacOS X FIXME: do it in a better way
   --
   printverbose(2,'['..command..']')
   io.stdout:flush() -- para que las cosas salgan en un orden apropiado
   io.stderr:flush() -- para que las cosas salgan en un orden apropiado
   formiga.os.execute(command)
 
-  if not formiga.compiler.global_flags.no_shared then
-    local shared_lib_dest_dir = formiga.os.compose_dir(formiga.global_properties.build_dir,
-                                                       "lib")
-    os_mkdir(shared_lib_dest_dir)
-
-    printverbosecolor(1, "bright_blue", nil, "Creating shared library...")
-    -- Shared library for compilation of new modules out of APRIL repository
-    local command = table.concat({ formiga.compiler.CPPcompiler,
-                                   formiga.compiler.wall,
-                                   formiga.compiler.destination,
-                                   formiga.os.compose_dir(shared_lib_dest_dir,
-                                                          "lib"..formiga.program_name..".so"),
-                                   formiga.os.compose_dir(formiga.global_properties.build_dir,
-                                                          "luapkg.cc"),
-                                   --formiga.compiler.include_dir,
-                                   formiga.get_all_objects(),
-                                   formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
-                                   package_library_paths_str,
-                                   package_link_libraries_str,
-                                   table.concat(formiga.compiler.extra_libs,
-                                                " "),
-                                   table.concat(formiga.compiler.shared_extra_libs,
-                                                " "),
-                                   table.concat(formiga.compiler.extra_flags,
-                                                " "),
-                                   table.concat(formiga.version_flags,
-                                                " "),
-                                   pkgconfig_libs_list,
-                                   ' -lm '.. formiga.compiler.include_dir ..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
-                                     formiga.lua_dot_c_path},
-      " ")
-    command = command:gsub("-bundle","-dynamiclib") -- for MacOS X FIXME: do it in a better way
-    --
-    printverbose(2,'['..command..']')
-    io.stdout:flush() -- para que las cosas salgan en un orden apropiado
-    io.stderr:flush() -- para que las cosas salgan en un orden apropiado
-    formiga.os.execute(command)
-
-    printverbosecolor(1, "bright_blue", nil, "Creating Lua module...")
-    -- We generate a shared library which could be loaded in any Lua interperter
-    local command = table.concat({ formiga.compiler.CPPcompiler,
-                                   formiga.compiler.wall,
-                                   formiga.compiler.destination,
-                                   formiga.os.compose_dir(shared_lib_dest_dir,
-                                                          module_name..".so"),
-                                   formiga.os.compose_dir(formiga.global_properties.build_dir,
-                                                          "luapkgMain.cc"),
-                                   --formiga.compiler.include_dir,
-                                   -- formiga.get_all_objects(),
-                                   -- formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
-                                   formiga.compiler.object_dir..shared_lib_dest_dir,
-                                   formiga.compiler.library_inclusion..formiga.program_name,
-                                   package_library_paths_str,
-                                   package_link_libraries_str,
-                                   table.concat(formiga.compiler.extra_libs,
-                                                " "),
-                                   table.concat(formiga.compiler.shared_extra_libs,
-                                                " "),
-                                   table.concat(formiga.compiler.extra_flags,
-                                                " "),
-                                   table.concat(formiga.version_flags,
-                                                " "),
-                                   pkgconfig_libs_list,
-                                   ' -lm '.. formiga.compiler.include_dir ..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
-                                     formiga.lua_dot_c_path},
-      " ")
-    --
-    printverbose(2,'['..command..']')
-    io.stdout:flush() -- para que las cosas salgan en un orden apropiado
-    io.stderr:flush() -- para que las cosas salgan en un orden apropiado
-    formiga.os.execute(command)
-  end
+  printverbosecolor(1, "bright_blue", nil, "Creating Lua module...")
+  -- We generate a shared library which could be loaded in any Lua interperter
+  local command = table.concat({ formiga.compiler.CPPcompiler,
+                                 formiga.compiler.wall,
+                                 formiga.compiler.destination,
+                                 formiga.os.compose_dir(shared_lib_dest_dir,
+                                                        module_name..".so"),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,
+                                                        "luapkgMain.cc"),
+                                 --formiga.compiler.include_dir,
+                                 -- formiga.get_all_objects(),
+                                 -- formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
+                                 formiga.compiler.object_dir..shared_lib_dest_dir,
+                                 formiga.compiler.library_inclusion..formiga.program_name,
+                                 package_library_paths_str,
+                                 package_link_libraries_str,
+                                 table.concat(formiga.compiler.extra_libs,
+                                              " "),
+                                 table.concat(formiga.compiler.shared_extra_libs,
+                                              " "),
+                                 table.concat(formiga.compiler.extra_flags,
+                                              " "),
+                                 table.concat(formiga.version_flags,
+                                              " "),
+                                 pkgconfig_libs_list,
+                                 ' -lm '.. formiga.compiler.include_dir ..formiga.os.compose_dir(formiga.os.cwd,"lua","include")..' '.. formiga.compiler.include_dir ..
+                                   formiga.lua_dot_c_path},
+    " ")
+  --
+  printverbose(2,'['..command..']')
+  io.stdout:flush() -- para que las cosas salgan en un orden apropiado
+  io.stderr:flush() -- para que las cosas salgan en un orden apropiado
+  formiga.os.execute(command)
 end
 
-function link_main_program (t)
-  t.__task__ = formiga.__link_main_program__
+function create_shared_library (t)
+  t.__task__ = formiga.__create_shared_library__
   return t
 end
 
