@@ -78,7 +78,7 @@ dofile("luapkg/utilformiga.lua")
 local commit_count = io.popen("git rev-list HEAD --count"):read("*l")
 local commit_hash = io.popen("git log -n 1 --pretty=format:\"%H\""):read("*l")
 if not tonumber(commit_count) then commit_count="UNKNOWN" end
-if #commit_hash == 0 then commit_hash="UNKNOWN" end
+if not commit_hash or #commit_hash == 0 then commit_hash="UNKNOWN" end
 
 -----------------------------------------------------------------
 -- table used to avoid using "other" global variables
