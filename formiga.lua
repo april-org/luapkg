@@ -73,7 +73,7 @@
 --  }
 --
 
-dofile("binding/utilformiga.lua")
+dofile("luapkg/utilformiga.lua")
 
 local commit_count = io.popen("git rev-list HEAD --count"):read("*l")
 local commit_hash = io.popen("git log -n 1 --pretty=format:\"%H\""):read("*l")
@@ -449,7 +449,7 @@ function formiga.initialize ()
                              "lua","include")
     formiga.global_properties.bindtemplates_dir =
       formiga.os.compose_dir(formiga.os.cwd,
-                             "binding",
+                             "luapkg",
                              "bind_templates")
     formiga.global_properties.documentation_dir =
       formiga.os.compose_dir(formiga.os.cwd,
@@ -1181,7 +1181,7 @@ function formiga.__provide_bind__ (t)
     initialize_dir_once(dest_dir)
     dest_name = string.gsub(file,".lua",".h") -- TODO asumimos fichero es .lua.cc
     command = "lua "..
-      formiga.os.compose_dir(formiga.os.cwd,"binding","luabind.lua ")..
+      formiga.os.compose_dir(formiga.os.cwd,"luapkg","luabind.lua ")..
       formiga.os.compose_dir(dest_dir,dest_name).." "..
       formiga.os.compose_dir(formiga.global_properties.bindtemplates_dir,
 			     "luabind_template.h ")..
@@ -1392,7 +1392,7 @@ function formiga.__build_bind__ (t)
     dest_objfile = formiga.os.compose_dir(dest_dir,dest_obj)
 
     command = "lua "..
-      formiga.os.compose_dir(formiga.os.cwd,"binding","luabind.lua ")..
+      formiga.os.compose_dir(formiga.os.cwd,"luapkg","luabind.lua ")..
       dest_cfile.." "..
       formiga.os.compose_dir(formiga.global_properties.bindtemplates_dir,
 			     "luabind_template.cc ")..
@@ -1421,7 +1421,7 @@ function formiga.__build_bind__ (t)
       --"include"..formiga.os.SEPPATH..
       formiga.os.compose_dir(build_dir,"include")..formiga.os.SEPPATH..
       formiga.os.compose_dir(build_dir,"include", "binding")..formiga.os.SEPPATH..
-      formiga.os.compose_dir(formiga.os.cwd,"binding","c_src")
+      formiga.os.compose_dir(formiga.os.cwd,"luapkg","c_src")
     for w in string.gmatch(formiga.expand_properties(id,prop),
 			   "[^"..formiga.os.SEPPATH.."]+") do
       table.insert(command,formiga.compiler.include_dir..w) 
@@ -1974,7 +1974,7 @@ function formiga.__document_bind__ (t)
       command = {
 	"lua",
 	"-e'lines_information=0'",
-	formiga.os.compose_dir(formiga.os.cwd,"binding","luabind.lua "),
+	formiga.os.compose_dir(formiga.os.cwd,"luapkg","luabind.lua "),
 	destfile,
 	formiga.os.compose_dir(formiga.global_properties.bindtemplates_dir,
 			       "luabind_document_template"..extension),
@@ -2222,10 +2222,10 @@ function formiga.__main_documentation__ (t)
     -- copiar el our_doxygen.css
     os.execute(string.format("mkdir -p %s; cp %s %s",
 			     formiga.os.compose_dir(dest_dir,"html"),
-			     formiga.os.compose_dir(formiga.os.cwd,"binding","our_doxygen.css"),
+			     formiga.os.compose_dir(formiga.os.cwd,"luapkg","our_doxygen.css"),
 			     formiga.os.compose_dir(dest_dir,"html")))
     local doxygen_template_filename = 
-      formiga.os.compose_dir(formiga.os.cwd,"binding","Doxygen_template")
+      formiga.os.compose_dir(formiga.os.cwd,"luapkg","Doxygen_template")
     local doxygen_aux_file = formiga.os.compose_dir(doc_dir,"doxygen_conf")
     local doxygen_conf = {}
     local f = io.open(doxygen_template_filename,"r")
