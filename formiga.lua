@@ -1503,13 +1503,13 @@ function formiga.__copy_header_files__ (t)
   printverbosecolor(1, "bright_blue", nil, "Copying header files...")
   headers = {}  
   for pkg in pairs(formiga.set_of_packages) do
-    dir = formiga.os.compose_dir(formiga.global_properties.build_dir,
-                                 "packages",
-                                 formiga.package_to_dir[pkg],
-                                 "include",
-                                 "*")
-    dest_dir = formiga.os.compose_dir(formiga.global_properties.build_dir,
-                                      "include",formiga.program_name,pkg)
+    local dir = formiga.os.compose_dir(formiga.global_properties.build_dir,
+                                       "packages",
+                                       formiga.package_to_dir[pkg],
+                                       "include",
+                                       "*")
+    local dest_dir = formiga.os.compose_dir(formiga.global_properties.build_dir,
+                                            "include",formiga.program_name,pkg)
     os_mkdir(dest_dir)
     files = formiga.os.glob(dir)
     for _,f in ipairs(files) do
@@ -1536,8 +1536,8 @@ end
 
 local function build_luapkg_main_programs()
   if not formiga.builded_luapkg_main_programs then
-    local module_name = formiga.module_name
     formiga.builded_luapkg_main_programs = true
+    local module_name = formiga.module_name
     local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkg.cc"),"w")
     --
     f:write('#define lua_c\n')
@@ -1673,7 +1673,7 @@ function formiga.__link_main_program__ (t)
                                                         "luapkgMain.cc"),
                                  --formiga.compiler.include_dir,
                                  formiga.get_all_objects(),
-                                 formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o"),
+                                 formiga.os.compose_dir(formiga.global_properties.build_dir,"luapkg","c_src","*.o"),
                                  formiga.os.compose_dir(formiga.os.cwd,"lua","lib","*.a"),
                                  package_library_paths_str,
                                  package_link_libraries_str,
@@ -1706,7 +1706,7 @@ end
 
 function compile_luapkg_utils(t)
   formiga.compile_luapkg_utils = true
-  t.file = formiga.os.compose_dir("binding","c_src","*.cc")
+  t.file = formiga.os.compose_dir("luapkg","c_src","*.cc")
   t.include_dirs = "include"
   t.dest_dir = formiga.global_properties.build_dir
   return object(t)
@@ -1753,7 +1753,7 @@ function formiga.__create_shared_library__ (t)
                                  formiga.os.compose_dir(formiga.global_properties.build_dir,
                                                         "luapkg.cc"),
                                  formiga.get_all_objects(),
-                                 formiga.compile_luapkg_utils and formiga.os.compose_dir(formiga.global_properties.build_dir,"binding","c_src","*.o") or "",
+                                 formiga.compile_luapkg_utils and formiga.os.compose_dir(formiga.global_properties.build_dir,"luapkg","c_src","*.o") or "",
                                  package_library_paths_str,
                                  package_link_libraries_str,
                                  table.concat(formiga.compiler.extra_libs,
