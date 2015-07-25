@@ -209,7 +209,7 @@ local function unique(t)
   local r,located = {},{}
   for _,str in ipairs(t) do
     for v in str:gmatch("[^%s]+") do
-      if not located[v] then r[#r+1],located[v] = v,true end
+      if not v:find("^%-") or not located[v] then r[#r+1],located[v] = v,true end
     end
   end
   return r
