@@ -1815,7 +1815,7 @@ function formiga.__create_shared_library__ (t)
   local f = io.open("."..formiga.program_name..".pc", "w")
   f:write(([[
 prefix=%s
-libdir=${prefix}/lib/
+libdir=${prefix}/lib
 includedir=${prefix}/include
 Name: %s
 Description: %s
