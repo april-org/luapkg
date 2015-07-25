@@ -205,6 +205,14 @@ formiga = {
 
 -- auxiliary functions
 
+local function unique(t)
+  local r,located = {},{}
+  for _,v in ipairs(t) do
+    if not located[v] then r[#r+1],located[v] = v,true end
+  end
+  return r
+end
+  
 local function os_mkdir(dir)
   assert(os.execute("mkdir -p ".. dir))
 end
@@ -2501,6 +2509,9 @@ function manage_specific_global_flags()
     table.insert(formiga.compiler.extra_flags,
                  string.format("-DGIT_HASH=%s", commit_hash))
   end
+  formiga.compiler.extra_libs = unique(formiga.compiler.extra_libs)
+  formiga.compiler.extra_flags = unique(formiga.compiler.extra_flags)
+  formiga.compiler.extra_share_libs = unique(formiga.compiler.extra_libs)
 end
 
 ------------------------------------------------------------------------
