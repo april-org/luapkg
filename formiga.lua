@@ -1819,6 +1819,7 @@ function formiga.__create_shared_library__ (t)
         r[#r+1] = v
       end
     end
+    return r
   end
   --
   local f = io.open("."..formiga.program_name..".pc", "w")
