@@ -8,8 +8,10 @@ local function postprocess(arg, formiga)
     formiga.os.execute("mkdir -p "..formiga.os.compose_dir(arg[2], "bin"))
     formiga.os.execute("mkdir -p "..formiga.os.compose_dir(arg[2], "lib"))
     formiga.os.execute("mkdir -p "..formiga.os.compose_dir(arg[2], "include"))
-    formiga.os.execute("cp -f "..formiga.os.compose_dir(formiga.build_dir,"bin",formiga.program_name)
-                         .." "..formiga.os.compose_dir(arg[2], "bin", formiga.program_name))
+    if formiga.linked_main_program then
+      formiga.os.execute("cp -f "..formiga.os.compose_dir(formiga.build_dir,"bin",formiga.program_name)
+                           .." "..formiga.os.compose_dir(arg[2], "bin", formiga.program_name))
+    end
     formiga.os.execute("cp -R "..formiga.os.compose_dir(formiga.build_dir,"lib")
                          .." "..arg[2])
     formiga.os.execute("rm -Rf "..formiga.os.compose_dir(arg[2], "include", formiga.program_name))

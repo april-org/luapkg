@@ -1636,6 +1636,7 @@ local function build_luapkg_main_programs()
 end
 
 function formiga.__link_main_program__ (t)
+  formiga.linked_main_program = true
   -- crear programa ppal
   --formiga.exec_package("luapkg_main","build")
   local module_name = formiga.module_name
@@ -1717,6 +1718,7 @@ end
 ----------------------------------------------------------------------
 
 function formiga.__create_shared_library__ (t)
+  formiga.created_shared_library = true
   local module_name = formiga.module_name
   build_luapkg_main_programs()
   -- Collect all package libraries and generate compiler options.
