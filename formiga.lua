@@ -1829,7 +1829,7 @@ Cflags: -I${includedir} %s %s
            formiga.program_name,
            table.concat(formiga.compiler.extra_libs, " "),
            table.concat(formiga.compiler.extra_flags, " "),
-           table.concat(formiga.compiler.version_flags, " ")))
+           table.concat(formiga.version_flags, " ")))
   f:close()
 end
 
