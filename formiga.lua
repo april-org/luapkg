@@ -75,11 +75,6 @@
 
 dofile("luapkg/utilformiga.lua")
 
-local commit_count = io.popen("git rev-list HEAD --count"):read("*l")
-local commit_hash = io.popen("git log -n 1 --pretty=format:\"%H\""):read("*l")
-if not tonumber(commit_count) then commit_count="UNKNOWN" end
-if not commit_hash or #commit_hash == 0 then commit_hash="UNKNOWN" end
-
 -----------------------------------------------------------------
 -- table used to avoid using "other" global variables
 formiga = {
@@ -110,8 +105,6 @@ formiga = {
     extra_libs = {"-ldl"},
     shared_extra_libs = { },
     extra_flags = {
-      string.format("-DGIT_COMMIT=%s", commit_count),
-      string.format("-DGIT_HASH=%s", commit_hash),
     },
     language_by_extension = {
       c = "c", cc = "c++", cxx = "c++", CC = "c++", cpp = "c++",
@@ -1592,6 +1585,10 @@ local function build_luapkg_main_programs()
     f:write('  return 1;\n')
     f:write('}\n')
     f:write('}\n')
+    f:write('#undef GIT_COMMIT\n')
+    f:write('#undef STRINGFY\n')
+    f:write('#undef TOSTRING\n')
+    f:write('#undef lua_c\n')
     f:close()
     --
     local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkgMain.cc"),"w")
@@ -1614,6 +1611,8 @@ local function build_luapkg_main_programs()
     f:write('  } while(0)\n')
     f:write('\n')
     f:write('#include <lua.c>\n')
+    f:write('#undef lua_userinit\n')
+    f:write('#undef lua_c\n')
     f:close()
     --
     local f = io.open(formiga.os.compose_dir(formiga.global_properties.build_dir, "luapkgDummy.cc"),"w")
@@ -1631,6 +1630,7 @@ local function build_luapkg_main_programs()
     f:write('extern int luaopen_'..module_name..'(lua_State *L);\n')
     f:write('}\n')
     f:write('static void dummy_'..module_name..'(lua_State *L) { luaopen_'.. module_name..'(L); }\n')
+    f:write('#undef lua_c\n')
     f:close()
   end
 end
@@ -2456,6 +2456,16 @@ function manage_specific_global_flags()
   end
   if t.extra_flags then
     table.append(formiga.compiler.extra_flags,t.extra_flags)
+  end
+  if t.add_git_metadata=="yes" then
+    local commit_count = io.popen("git rev-list HEAD --count"):read("*l")
+    local commit_hash = io.popen("git log -n 1 --pretty=format:\"%H\""):read("*l")
+    if not tonumber(commit_count) then commit_count="UNKNOWN" end
+    if not commit_hash or #commit_hash == 0 then commit_hash="UNKNOWN" end
+    table.insert(formiga.compiler.extra_flags,
+                 string.format("-DGIT_COMMIT=%s", commit_count))
+    table.insert(formiga.compiler.extra_flags,
+                 string.format("-DGIT_HASH=%s", commit_hash))
   end
 end
 
