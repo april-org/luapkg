@@ -207,8 +207,10 @@ formiga = {
 
 local function unique(t)
   local r,located = {},{}
-  for _,v in ipairs(t) do
-    if not located[v] then r[#r+1],located[v] = v,true end
+  for _,str in ipairs(t) do
+    for v in str:gmatch("[^%s]+") do
+      if not located[v] then r[#r+1],located[v] = v,true end
+    end
   end
   return r
 end
@@ -1867,7 +1869,7 @@ function formiga.__dot_graph__ (t)
     formiga.set_of_packages[origpkg] then
       dotfile:write(origpkg .. " [label=" .. origpkg .. "];\n")      
       for _,destpkg in formiga.pkg_graph:next_iterator(origpkg) do
-	dotfile:write(origpkg .. " -> " .. destpkg .. ";\n")
+        dotfile:write(origpkg .. " -> " .. destpkg .. ";\n")
       end
     end
   end
