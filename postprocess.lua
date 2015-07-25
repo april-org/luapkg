@@ -30,6 +30,12 @@ extern "C" {
 int luaopen_%s(lua_State *L);
 }
 ]]):format(formiga.module_name:upper(),formiga.module_name:upper(),formiga.module_name))
+    for _,flag in ipairs(formiga.compiler.extra_flags) do
+      if flag:find("^%-D") then
+        local k,v = flag:match("^%-D([^=]+)=?(.*)$")
+        f:write(("#define %s %s\n"):format(k,v or ""))
+      end
+    end
     local dir = formiga.os.compose_dir(arg[2],"include",formiga.program_name)
     local thefiles = formiga.os.glob(formiga.os.compose_dir(dir,"*"))
     for _,file in ipairs(thefiles) do
