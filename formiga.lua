@@ -1832,7 +1832,7 @@ Description: %s
 Version: %s
 URL: %s
 Requires.private: lua5.2
-Libs: -l%s -llua5.2 -lpthread -lm
+Libs: -L${libdir} -l%s -llua5.2 -lpthread -lm
 Cflags: -I${includedir} %s
 ]]):format(formiga.prefix, formiga.program_name, formiga.description,
            formiga.version, formiga.url,
