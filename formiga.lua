@@ -42,6 +42,12 @@
 --
 -- luapkg{
 --    program_name = "blah",
+--    description = "blah",
+--    version = "0.4.0",
+--    prefix = "/usr",
+--    url = "http://blah",
+--    version_flags = { ... },
+--    disclaimer_strings = { ... },
 --    packages = { -- list of packages included in the binary
 --      packageA,
 --      packageB,
@@ -1805,6 +1811,26 @@ function formiga.__create_shared_library__ (t)
   io.stdout:flush() -- para que las cosas salgan en un orden apropiado
   io.stderr:flush() -- para que las cosas salgan en un orden apropiado
   formiga.os.execute(command)
+  --
+  local f = io.open("."..formiga.program_name..".pc", "w")
+  f:write(([[
+prefix=%s
+libdir=${prefix}/lib/
+includedir=${prefix}/include
+Name: %s
+Description: %s
+Version: %s
+URL: %s
+Requires.private: lua5.2
+Libs: -l%s -llua5.2 -lpthread -lm %s
+Cflags: -I${includedir} %s %s
+]]):format(formiga.prefix, formiga.program_name, formiga.description,
+           formiga.version, formiga.url,
+           formiga.program_name,
+           table.concat(formiga.compiler.extra_libs, " "),
+           table.concat(formiga.compiler.extra_flags, " "),
+           table.concat(formiga.compiler.version_flags, " ")))
+  f:close()
 end
 
 function create_shared_library (t)
@@ -2479,8 +2505,11 @@ function luapkg (t)
 
   formiga.program_name = t.program_name
   formiga.module_name  = t.program_name:gsub("[%-%.%_]","")
-  
-  formiga.version_flags    = t.version_flags or {}
+  formiga.description  = t.description or ""
+  formiga.version      = t.version or "0.1"
+  formiga.url          = t.url or ""
+  formiga.prefix       = t.prefix or "/usr"
+  formiga.version_flags      = t.version_flags or {}
   formiga.disclaimer_strings = t.disclaimer_strings or {}
 
   formiga.verbosity_level = t.verbosity_level or 2
