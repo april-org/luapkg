@@ -1815,9 +1815,7 @@ function formiga.__create_shared_library__ (t)
   local function filter(t)
     local r = {}
     for _,v in ipairs(t) do
-      if not v:find("GIT_COMMIT") and not v:find("GIT_HASH") then
-        r[#r+1] = v
-      end
+      if not v:find("^%-D") then r[#r+1] = v end
     end
     return r
   end

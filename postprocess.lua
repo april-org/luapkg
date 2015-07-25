@@ -25,6 +25,12 @@ local function postprocess(arg, formiga)
 #ifndef %s_H
 #define %s_H
 ]]):format(upper_modulename,upper_modulename))
+    for _,flag in ipairs(formiga.compiler.extra_flags) do
+      if flag:find("^%-D") and not flag:find("GIT_COMMIT") and not flag:find("GIT_HASH") then
+        local k,v = flag:match("^%-D([^=]+)=?(.*)$")
+        f:write(("#define %s %s\n"):format(k,v or ""))
+      end
+    end
     f:write(([[
 extern "C" {
 #include <lua.h>
@@ -39,6 +45,12 @@ int luaopen_%s(lua_State *L);
       if not file:find(formiga.program_name..".h", nil, true) then
         local basename = string.sub(file, select(2,file:find(dir, nil, true))+2)
         f:write( ('#include "%s/%s"\n'):format(formiga.program_name,basename) )
+      end
+    end
+    for _,flag in ipairs(formiga.compiler.extra_flags) do
+      if flag:find("^%-D") and not flag:find("GIT_COMMIT") and not flag:find("GIT_HASH") then
+        local k = flag:match("^%-D([^=]+).*$")
+        f:write(("#undef %s\n"):format(k))
       end
     end
     f:write(("#endif // %s_H\n"):format(formiga.module_name:upper()))
