@@ -1812,7 +1812,18 @@ function formiga.__create_shared_library__ (t)
   io.stderr:flush() -- para que las cosas salgan en un orden apropiado
   formiga.os.execute(command)
   --
+  local function filter(t)
+    local r = {}
+    for _,v in ipairs(t) do
+      if not v:find("GIT_COMMIT") and not v:find("GIT_HASH") then
+        r[#r+1] = v
+      end
+    end
+  end
+  --
   local f = io.open("."..formiga.program_name..".pc", "w")
+  local libs = table.concat(formiga.compiler.extra_libs, " ")
+  local flags = table.concat(filter(formiga.compiler.extra_flags), " ")
   f:write(([[
 prefix=%s
 libdir=${prefix}/lib
@@ -1822,14 +1833,12 @@ Description: %s
 Version: %s
 URL: %s
 Requires.private: lua5.2
-Libs: -l%s -llua5.2 -lpthread -lm %s
-Cflags: -I${includedir} %s %s
+Libs: -l%s -llua5.2 -lpthread -lm
+Cflags: -I${includedir} %s
 ]]):format(formiga.prefix, formiga.program_name, formiga.description,
            formiga.version, formiga.url,
            formiga.program_name,
-           table.concat(formiga.compiler.extra_libs, " "),
-           table.concat(formiga.compiler.extra_flags, " "),
-           table.concat(formiga.version_flags, " ")))
+           flags))
   f:close()
 end
 
