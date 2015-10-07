@@ -231,6 +231,7 @@ void lua_push$$ClassName$$(lua_State *L, $$ClassName$$ *obj){
 #include "luabindmacros.h"
 
 int lua_new_$$ClassName$$_$$FILENAME2$$(lua_State *L) {
+  try {
 	lua_remove(L,1);  // primer parametro es la metatabla __call(table,...)
 	$$ClassName$$ UNUSED *obj = 0;
 	DEBUG("lua_new_$$ClassName$$ (begin)");
@@ -242,16 +243,37 @@ int lua_new_$$ClassName$$_$$FILENAME2$$(lua_State *L) {
                         "error message string (2 values) in case of error");
         }
 	return luabind_num_returned_values;
+  } catch(char *message) {
+    size_t ln = strlen(message);
+    if (ln > 0) {
+      if (message[ln-1] == '\n') message[--ln] = '\0';
+    }
+    lua_pushlstring(L, message, ln);
+    delete[] message;
+    return lua_error(L);
+  }
 }
 
 int lua_delete_$$ClassName$$_$$FILENAME2$$(lua_State *L){
   $$ClassName$$ *obj = lua_rawget$$ClassName$$_$$FILENAME2$$(L,1);
   if (obj != 0) {
-    DEBUG_OBJ("lua_delete_$$ClassName$$ (begin)",obj);
-    $$class.destructor$$
-    DEBUG_OBJ("lua_delete_$$ClassName$$ (end)",obj);
-    // Hacemos un DecRef para borrar la referencia a este objeto
-    DecRef(obj);
+    try {
+      DEBUG_OBJ("lua_delete_$$ClassName$$ (begin)",obj);
+      $$class.destructor$$
+      DEBUG_OBJ("lua_delete_$$ClassName$$ (end)",obj);
+      // Hacemos un DecRef para borrar la referencia a este objeto
+      DecRef(obj);
+    } catch(char *message) {
+      // Hacemos un DecRef para borrar la referencia a este objeto
+      DecRef(obj);
+      size_t ln = strlen(message);
+      if (ln > 0) {
+        if (message[ln-1] == '\n') message[--ln] = '\0';
+      }
+      lua_pushlstring(L, message, ln);
+      delete[] message;
+      return lua_error(L);
+    }
   }
   // FIXME: This warning is due to the META_INSTANCE tables with other
   // META_INSTANCEs as metatable (inheritance), so a __gc metamethod which is
@@ -723,11 +745,21 @@ int lua_register_subclasses_$$FILENAME2$$(lua_State *L){
 //LUA for name,code in pairs(STATIC_CONSTRUCTOR) do
 
 int lua_execute_static_constructor_$$FILENAME2$$_$$name$$(lua_State *L) {
-  UNUSED_VARIABLE(L);
-  DEBUG("lua_execute_static_constructor_$$FILENAME2$$_$$name$$ (begin)");
-  $$code$$
-  DEBUG("lua_execute_static_constructor_$$FILENAME2$$_$$name$$ (end)");
-  return 0;
+  try {
+    UNUSED_VARIABLE(L);
+    DEBUG("lua_execute_static_constructor_$$FILENAME2$$_$$name$$ (begin)");
+    $$code$$
+    DEBUG("lua_execute_static_constructor_$$FILENAME2$$_$$name$$ (end)");
+    return 0;
+  } catch(char *message) {
+    size_t ln = strlen(message);
+    if (ln > 0) {
+      if (message[ln-1] == '\n') message[--ln] = '\0';
+    }
+    lua_pushlstring(L, message, ln);
+    delete[] message;
+    return lua_error(L);
+  }
 }
 
 $$FOOTER_C$$
