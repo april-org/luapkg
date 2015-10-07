@@ -483,7 +483,7 @@ int lua_call_$$ClassName$$_$$MethodName$$(lua_State *L){
   } catch(char *message) {
     size_t ln = strlen(message);
     if (ln > 0) {
-      if (message[ln-1] = '\n') message[--ln] = '\0';
+      if (message[ln-1] == '\n') message[--ln] = '\0';
     }
     lua_pushlstring(L, message, ln);
     delete[] message;
@@ -509,7 +509,7 @@ int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
   } catch(char *message) {
     size_t ln = strlen(message);
     if (ln > 0) {
-      if (message[ln-1] = '\n') message[--ln] = '\0';
+      if (message[ln-1] == '\n') message[--ln] = '\0';
     }
     lua_pushlstring(L, message, ln);
     delete[] message;
@@ -537,7 +537,7 @@ static int lua_call_$$string.gsub(func_name,"%p","_")$$(lua_State *L){
   } catch(char *message) {
     size_t ln = strlen(message);
     if (ln > 0) {
-      if (message[ln-1] = '\n') message[--ln] = '\0';
+      if (message[ln-1] == '\n') message[--ln] = '\0';
     }
     lua_pushlstring(L, message, ln);
     delete[] message;
