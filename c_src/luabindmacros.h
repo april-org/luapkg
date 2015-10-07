@@ -87,42 +87,36 @@
 #undef LUABIND_ERROR
 #define LUABIND_ERROR(str) \
   do {\
-    lua_pushstring(L, FUNCTION_NAME ": " str); \
-    lua_error(L); \
+    throw(strdup(FUNCTION_NAME ": " str));      \
   } while (0)
 
 #undef LUABIND_FERROR1
 #define LUABIND_FERROR1(str, p1) \
   do {\
-    lua_pushfstring(L, FUNCTION_NAME ": " str, p1); \
-    lua_error(L); \
+    throw(newstrfmt(FUNCTION_NAME ": " str, p1));   \
   } while (0)
 
 #undef LUABIND_FERROR2
 #define LUABIND_FERROR2(str, p1, p2) \
   do {\
-    lua_pushfstring(L, FUNCTION_NAME ": " str, p1, p2); \
-    lua_error(L); \
+    throw(newstrfmt(FUNCTION_NAME ": " str, p1, p2));   \
   } while (0)
 
 #undef LUABIND_FERROR3
 #define LUABIND_FERROR3(str, p1, p2, p3) \
   do {\
-    lua_pushfstring(L, FUNCTION_NAME ": " str, p1, p2, p3); \
-    lua_error(L); \
+    throw(newstrfmt(FUNCTION_NAME ": " str, p1, p2, p3));       \
   } while (0)
 
 #undef LUABIND_FERROR4
 #define LUABIND_FERROR4(str, p1, p2, p3, p4)	\
   do {\
-    lua_pushfstring(L, FUNCTION_NAME ": " str, p1, p2, p3, p4);	\
-    lua_error(L); \
+    throw(newstrfmt(FUNCTION_NAME ": " str, p1, p2, p3, p4));   \
   } while (0)
 
 #undef LUABIND_FERROR5
 #define LUABIND_FERROR5(str, p1, p2, p3, p4, p5)	\
   do {\
-    lua_pushfstring(L, FUNCTION_NAME ": " str, p1, p2, p3, p4, p5);	\
-    lua_error(L); \
+    throw(newstrfmt(FUNCTION_NAME ": " str, p1, p2, p3, p4, p5));       \
   } while (0)
 

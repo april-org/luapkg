@@ -2,12 +2,15 @@
 #define LUABINDUTIL_H
 
 #include <stdint.h>
+#include <cstring>
 
 extern "C" {
 	#include "lua.h"
 	#include "lualib.h"
 	#include "lauxlib.h"
 }
+
+char *newstrfmt(const char *fmt, ...);
 
 int equaluserdata(lua_State *L);
 

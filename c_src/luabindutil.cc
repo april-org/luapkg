@@ -3,6 +3,17 @@
 #include <cstdio>
 #include <cstring>
 
+#define MAX_BUF 4096u
+char *newstrfmt(const char *fmt, ...) {
+  char *buf = new char[MAX_BUF+1];
+  va_list list;
+  va_start(list, fmt);
+  vsnprintf(buf, MAX_BUF, fmt, list);
+  va_end(list);
+  return buf;
+}
+#undef MAX_BUF
+
 #define PARENTS_REGISTRY_FIELD_NAME "luabind_parents"
 #define CAST_REGISTRY_FIELD_NAME "luabind_cast"
 

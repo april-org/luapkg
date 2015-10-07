@@ -467,18 +467,28 @@ int lua_call_$$ClassName$$_$$MethodName$$(lua_State *L){
                         "$$ClassName$$. Did you use '.' instead of ':'?");
       lua_error(L);
   }
-  $$ClassName$$ *obj = lua_rawget$$ClassName$$_$$FILENAME2$$(L,1);
-  int luabind_num_returned_values = 0;
-  DEBUG_OBJ("lua_call_$$ClassName$$_$$MethodName$$ (begin)", obj);
-  // to avoid early deletion of the object in case of garbage collection
-  luabind_reference_handler_$$ClassName$$ ref_handler(obj);
-  lua_remove(L,1);
-  // CODE:
-  {
-    $$code$$
-      }
-  DEBUG_OBJ("lua_call_$$ClassName$$_$$MethodName$$ (end)", obj);
-  return luabind_num_returned_values;
+  try {
+    $$ClassName$$ *obj = lua_rawget$$ClassName$$_$$FILENAME2$$(L,1);
+    int luabind_num_returned_values = 0;
+    DEBUG_OBJ("lua_call_$$ClassName$$_$$MethodName$$ (begin)", obj);
+    // to avoid early deletion of the object in case of garbage collection
+    luabind_reference_handler_$$ClassName$$ ref_handler(obj);
+    lua_remove(L,1);
+    // CODE:
+    {
+      $$code$$
+    }
+    DEBUG_OBJ("lua_call_$$ClassName$$_$$MethodName$$ (end)", obj);
+    return luabind_num_returned_values;
+  } catch(char *message) {
+    size_t ln = strlen(message);
+    if (ln > 0) {
+      if (message[ln-1] = '\n') message[--ln] = '\0';
+    }
+    lua_pushlstring(L, message, ln);
+    delete[] message;
+    return lua_error(L);
+  }
 }
 //LUA end
 
@@ -488,7 +498,7 @@ int lua_call_$$ClassName$$_$$MethodName$$(lua_State *L){
 #include "luabindmacros.h"
 
 int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
-	
+  try {
 	DEBUG("lua_call_class_$$ClassName$$_$$ClassMethodName$$");
         int luabind_num_returned_values = 0;
 	// CODE:
@@ -496,6 +506,15 @@ int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
 	  $$code$$
 	}
 	return luabind_num_returned_values;
+  } catch(char *message) {
+    size_t ln = strlen(message);
+    if (ln > 0) {
+      if (message[ln-1] = '\n') message[--ln] = '\0';
+    }
+    lua_pushlstring(L, message, ln);
+    delete[] message;
+    return lua_error(L);
+  }
 }
 //LUA end
 
@@ -509,11 +528,21 @@ int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
 
 static int lua_call_$$string.gsub(func_name,"%p","_")$$(lua_State *L){
   lua_remove(L,1);  // primer parametro es la metatabla __call(table,...)
-  DEBUG("lua_call_$$string.gsub(func_name,"%p","_")$$ (begin)");
-  int luabind_num_returned_values = 0;
-  $$code$$
-  DEBUG("lua_call_$$string.gsub(func_name,"%p","_")$$ (end)");
-  return luabind_num_returned_values;
+  try {
+    DEBUG("lua_call_$$string.gsub(func_name,"%p","_")$$ (begin)");
+    int luabind_num_returned_values = 0;
+    $$code$$
+      DEBUG("lua_call_$$string.gsub(func_name,"%p","_")$$ (end)");
+    return luabind_num_returned_values;
+  } catch(char *message) {
+    size_t ln = strlen(message);
+    if (ln > 0) {
+      if (message[ln-1] = '\n') message[--ln] = '\0';
+    }
+    lua_pushlstring(L, message, ln);
+    delete[] message;
+    return lua_error(L);
+  }
 }
 //LUA end
 
