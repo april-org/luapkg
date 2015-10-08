@@ -16,11 +16,11 @@ extern "C" {
 #include <cstdlib> // para utilizar exit
 
 #ifndef BIND_TRY
-#define BIND_TRY char *__error_message__=NULL; try
+#define BIND_TRY() char *__error_message__=NULL; try
 #endif
 
 #ifndef BIND_CATCH
-#define BIND_CATCH catch(char *message) {                           \
+#define BIND_CATCH() catch(char *message) {                         \
     __error_message__ = message;                                    \
   }                                                                 \
   catch(...) {                                                      \
@@ -271,8 +271,7 @@ int lua_new_$$ClassName$$_$$FILENAME2$$(lua_State *L) {
 	return luabind_num_returned_values;
   } 
   BIND_CATCH();
-catch(char *message) {
-
+  return 0;
 }
 
 int lua_delete_$$ClassName$$_$$FILENAME2$$(lua_State *L){
@@ -516,6 +515,7 @@ int lua_call_$$ClassName$$_$$MethodName$$(lua_State *L){
     return luabind_num_returned_values;
   }
   BIND_CATCH();
+  return 0;
 }
 //LUA end
 
@@ -535,6 +535,7 @@ int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
 	return luabind_num_returned_values;
   } 
   BIND_CATCH();
+  return 0;
 }
 //LUA end
 
@@ -556,6 +557,7 @@ static int lua_call_$$string.gsub(func_name,"%p","_")$$(lua_State *L){
     return luabind_num_returned_values;
   }
   BIND_CATCH();
+  return 0;
 }
 //LUA end
 
@@ -744,6 +746,7 @@ int lua_execute_static_constructor_$$FILENAME2$$_$$name$$(lua_State *L) {
     return 0;
   }
   BIND_CATCH();
+  return 0;
 }
 
 $$FOOTER_C$$
