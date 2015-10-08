@@ -16,11 +16,11 @@ extern "C" {
 #include <cstdlib> // para utilizar exit
 
 #ifndef BIND_TRY
-#define BIND_TRY char *__error_message__=NULL; try
+#define BIND_TRY() char *__error_message__=NULL; try
 #endif
 
 #ifndef BIND_CATCH
-#define BIND_CATCH catch(char *message) {                           \
+#define BIND_CATCH() catch(char *message) {                         \
     __error_message__ = message;                                    \
   }                                                                 \
   catch(...) {                                                      \
