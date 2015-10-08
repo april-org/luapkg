@@ -39,6 +39,7 @@ extern "C" {
       return lua_error(L);                                          \
     }                                                               \
   } while(0)
+#endif
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((unused))
