@@ -15,6 +15,31 @@ extern "C" {
 #include <cstring> // para strerror
 #include <cstdlib> // para utilizar exit
 
+#ifndef BIND_TRY
+#define BIND_TRY char *__error_message__=NULL; try
+#endif
+
+#ifndef BIND_CATCH
+#define BIND_CATCH catch(char *message) {                           \
+    __error_message__ = message;                                    \
+  }                                                                 \
+  catch(...) {                                                      \
+    __error_message__ = strdup("Unknown exception\n");              \
+  }                                                                 \
+  do {                                                              \
+    if (__error_message__) {                                        \
+      size_t ln = strlen(__error_message__);                        \
+      if (ln > 0) {                                                 \
+        if (__error_message__[ln-1] == '\n') {                      \
+          __error_message__[--ln] = '\0';                           \
+        }                                                           \
+      }                                                             \
+      lua_pushlstring(L, __error_message__, ln);                    \
+      delete[] __error_message__;                                   \
+      return lua_error(L);                                          \
+    }                                                               \
+  } while(0)
+
 #ifdef __GNUC__
 #define UNUSED __attribute__((unused))
 #else
@@ -231,7 +256,7 @@ void lua_push$$ClassName$$(lua_State *L, $$ClassName$$ *obj){
 #include "luabindmacros.h"
 
 int lua_new_$$ClassName$$_$$FILENAME2$$(lua_State *L) {
-  try {
+  BIND_TRY() {
 	lua_remove(L,1);  // primer parametro es la metatabla __call(table,...)
 	$$ClassName$$ UNUSED *obj = 0;
 	DEBUG("lua_new_$$ClassName$$ (begin)");
@@ -243,37 +268,23 @@ int lua_new_$$ClassName$$_$$FILENAME2$$(lua_State *L) {
                         "error message string (2 values) in case of error");
         }
 	return luabind_num_returned_values;
-  } catch(char *message) {
-    size_t ln = strlen(message);
-    if (ln > 0) {
-      if (message[ln-1] == '\n') message[--ln] = '\0';
-    }
-    lua_pushlstring(L, message, ln);
-    delete[] message;
-    return lua_error(L);
-  }
+  } 
+  BIND_CATCH();
+catch(char *message) {
+
 }
 
 int lua_delete_$$ClassName$$_$$FILENAME2$$(lua_State *L){
   $$ClassName$$ *obj = lua_rawget$$ClassName$$_$$FILENAME2$$(L,1);
   if (obj != 0) {
-    try {
+    BIND_TRY() {
       DEBUG_OBJ("lua_delete_$$ClassName$$ (begin)",obj);
       $$class.destructor$$
       DEBUG_OBJ("lua_delete_$$ClassName$$ (end)",obj);
       // Hacemos un DecRef para borrar la referencia a este objeto
       DecRef(obj);
-    } catch(char *message) {
-      // Hacemos un DecRef para borrar la referencia a este objeto
-      DecRef(obj);
-      size_t ln = strlen(message);
-      if (ln > 0) {
-        if (message[ln-1] == '\n') message[--ln] = '\0';
-      }
-      lua_pushlstring(L, message, ln);
-      delete[] message;
-      return lua_error(L);
     }
+    BIND_CATCH();
   }
   // FIXME: This warning is due to the META_INSTANCE tables with other
   // META_INSTANCEs as metatable (inheritance), so a __gc metamethod which is
@@ -489,7 +500,7 @@ int lua_call_$$ClassName$$_$$MethodName$$(lua_State *L){
                         "$$ClassName$$. Did you use '.' instead of ':'?");
       lua_error(L);
   }
-  try {
+  BIND_TRY() {
     $$ClassName$$ *obj = lua_rawget$$ClassName$$_$$FILENAME2$$(L,1);
     int luabind_num_returned_values = 0;
     DEBUG_OBJ("lua_call_$$ClassName$$_$$MethodName$$ (begin)", obj);
@@ -502,15 +513,8 @@ int lua_call_$$ClassName$$_$$MethodName$$(lua_State *L){
     }
     DEBUG_OBJ("lua_call_$$ClassName$$_$$MethodName$$ (end)", obj);
     return luabind_num_returned_values;
-  } catch(char *message) {
-    size_t ln = strlen(message);
-    if (ln > 0) {
-      if (message[ln-1] == '\n') message[--ln] = '\0';
-    }
-    lua_pushlstring(L, message, ln);
-    delete[] message;
-    return lua_error(L);
   }
+  BIND_CATCH();
 }
 //LUA end
 
@@ -520,7 +524,7 @@ int lua_call_$$ClassName$$_$$MethodName$$(lua_State *L){
 #include "luabindmacros.h"
 
 int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
-  try {
+  BIND_TRY() {
 	DEBUG("lua_call_class_$$ClassName$$_$$ClassMethodName$$");
         int luabind_num_returned_values = 0;
 	// CODE:
@@ -528,15 +532,8 @@ int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
 	  $$code$$
 	}
 	return luabind_num_returned_values;
-  } catch(char *message) {
-    size_t ln = strlen(message);
-    if (ln > 0) {
-      if (message[ln-1] == '\n') message[--ln] = '\0';
-    }
-    lua_pushlstring(L, message, ln);
-    delete[] message;
-    return lua_error(L);
-  }
+  } 
+  BIND_CATCH();
 }
 //LUA end
 
@@ -550,21 +547,14 @@ int lua_call_class_$$ClassName$$_$$ClassMethodName$$(lua_State *L){
 
 static int lua_call_$$string.gsub(func_name,"%p","_")$$(lua_State *L){
   lua_remove(L,1);  // primer parametro es la metatabla __call(table,...)
-  try {
+  BIND_TRY() {
     DEBUG("lua_call_$$string.gsub(func_name,"%p","_")$$ (begin)");
     int luabind_num_returned_values = 0;
     $$code$$
       DEBUG("lua_call_$$string.gsub(func_name,"%p","_")$$ (end)");
     return luabind_num_returned_values;
-  } catch(char *message) {
-    size_t ln = strlen(message);
-    if (ln > 0) {
-      if (message[ln-1] == '\n') message[--ln] = '\0';
-    }
-    lua_pushlstring(L, message, ln);
-    delete[] message;
-    return lua_error(L);
   }
+  BIND_CATCH();
 }
 //LUA end
 
@@ -745,23 +735,19 @@ int lua_register_subclasses_$$FILENAME2$$(lua_State *L){
 //LUA for name,code in pairs(STATIC_CONSTRUCTOR) do
 
 int lua_execute_static_constructor_$$FILENAME2$$_$$name$$(lua_State *L) {
-  try {
+  BIND_TRY() {
     UNUSED_VARIABLE(L);
     DEBUG("lua_execute_static_constructor_$$FILENAME2$$_$$name$$ (begin)");
     $$code$$
     DEBUG("lua_execute_static_constructor_$$FILENAME2$$_$$name$$ (end)");
     return 0;
-  } catch(char *message) {
-    size_t ln = strlen(message);
-    if (ln > 0) {
-      if (message[ln-1] == '\n') message[--ln] = '\0';
-    }
-    lua_pushlstring(L, message, ln);
-    delete[] message;
-    return lua_error(L);
   }
+  BIND_CATCH();
 }
 
 $$FOOTER_C$$
 
 //LUA end
+
+#undef BIND_TRY
+#undef BIND_CATCH
